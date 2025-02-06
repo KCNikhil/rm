@@ -14,7 +14,8 @@ def main():
     # Configuration
     config = {
         "paths": {
-            "data": r'C:\Users\Admin\OneDrive - Aayush\Desktop\pricing_model\data\oneupdated_data_with_random_values.csv',
+            # Corrected data path (removed extra quotes)
+            "data": r"C:\Users\Admin\OneDrive - Aayush\Desktop\pricing_model\data\aggregated_output_updated_copy.csv",
             "output_dir": r'C:\Users\Admin\OneDrive - Aayush\Desktop\pricing_model\Curves',
             "model_dir": r'C:\Users\Admin\OneDrive - Aayush\Desktop\pricing_model\models'
         },
@@ -32,7 +33,7 @@ def main():
     }
 
     try:
-        # Create directories
+        # Create directories if they do not exist
         os.makedirs(config["paths"]["output_dir"], exist_ok=True)
         os.makedirs(config["paths"]["model_dir"], exist_ok=True)
         print("✅ Directories created successfully")
@@ -40,11 +41,11 @@ def main():
         # Load and validate data
         if not os.path.exists(config["paths"]["data"]):
             raise FileNotFoundError(f"Data file not found: {config['paths']['data']}")
-
+            
         df = pd.read_csv(config["paths"]["data"])
         print("✅ Data loaded successfully")
 
-        # Data cleaning
+        # Data cleaning: remove rows with missing target values
         initial_count = len(df)
         df = df.dropna(subset=[config["target"]])
         cleaned_count = len(df)
@@ -68,7 +69,7 @@ def main():
         X_train_scaled = scaler.fit_transform(X_train)
         X_test_scaled = scaler.transform(X_test)
 
-        # Model training with validation curve
+        # Model training with validation curve for hyperparameter tuning
         print("🔍 Tuning hyperparameters...")
         train_scores, val_scores = validation_curve(
             Ridge(random_state=config["model_params"]["random_state"]),
@@ -81,12 +82,12 @@ def main():
             n_jobs=-1
         )
 
-        # Find best alpha
+        # Find best alpha based on minimum validation error
         mean_val_scores = -np.mean(val_scores, axis=1)
         best_alpha_idx = np.argmin(mean_val_scores)
         best_alpha = config["model_params"]["alpha_range"][best_alpha_idx]
 
-        # Train final model with best alpha
+        # Train final model with the best alpha
         print(f"🏆 Best alpha selected: {best_alpha:.4f}")
         model = Ridge(alpha=best_alpha, random_state=config["model_params"]["random_state"])
         model.fit(X_train_scaled, y_train)
@@ -109,7 +110,7 @@ def main():
             ))
         }
 
-        # Feature importance
+        # Feature importance based on model coefficients
         coefficients = pd.DataFrame({
             'Feature': config["features"],
             'Importance': model.coef_
@@ -127,15 +128,19 @@ def main():
             n_jobs=-1
         )
 
-        # Save artifacts
+        # Save artifacts (model, scaler, feature importance, performance metrics)
         def save_artifact(obj, filename):
             try:
                 path = os.path.join(config["paths"]["model_dir"], filename)
-                joblib.dump(obj, path) if filename.endswith('.pkl') else obj.to_csv(path, index=False)
+                if filename.endswith('.pkl'):
+                    joblib.dump(obj, path)
+                else:
+                    obj.to_csv(path, index=False)
                 print(f"✅ Saved {filename}")
             except Exception as e:
                 print(f"⚠️  Failed to save {filename}: {str(e)}")
 
+        # Update the model files so that new training replaces the old models
         save_artifact(model, "ridge_model.pkl")
         save_artifact(scaler, "ridge_scaler.pkl")
         save_artifact(coefficients, "ridge_feature_importance.csv")

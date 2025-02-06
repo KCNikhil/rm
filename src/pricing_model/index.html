@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prediction Service</title>
+    <script>
+        async function getPrediction() {
+            const inputData = {
+                feature1: parseFloat(document.getElementById('feature1').value),
+                feature2: parseFloat(document.getElementById('feature2').value),
+                feature3: parseFloat(document.getElementById('feature3').value)
+            };
+
+            const response = await fetch('/predict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(inputData)
+            });
+
+            const result = await response.json();
+            document.getElementById('result').innerText = 'Prediction: ' + result.prediction;
+        }
+    </script>
+</head>
+<body>
+    <h2>Enter Feature Values</h2>
+    <input type="number" id="feature1" placeholder="Feature 1"><br><br>
+    <input type="number" id="feature2" placeholder="Feature 2"><br><br>
+    <input type="number" id="feature3" placeholder="Feature 3"><br><br>
+    <button onclick="getPrediction()">Get Prediction</button>
+    <h3 id="result"></h3>
+</body>
+</html>
